@@ -278,11 +278,11 @@ svg{display:block}
 /* ---------- Sorvete principal: entrada, flutuação, brilho e gotas ---------- */
 .scoop{animation:scoopIn 1.5s var(--ease) both, sway 9s ease-in-out 1.5s infinite}
 .scoop.pop{animation:pop .7s var(--ease), sway 9s ease-in-out infinite}
-@keyframes scoopIn{from{opacity:0;scale:.9;filter:blur(8px)}to{opacity:1;scale:1;filter:blur(0)}}
+@keyframes scoopIn{from{opacity:0;scale:.92}to{opacity:1;scale:1}}
 @keyframes sway{0%,100%{transform:translateY(0) rotate(-.7deg)}50%{transform:translateY(-14px) rotate(.9deg)}}
 @keyframes pop{0%{scale:.96}60%{scale:1.025}100%{scale:1}}
 .scoop::after{content:"";position:absolute;left:36%;top:17%;width:32%;height:15%;border-radius:50%;pointer-events:none;
-  background:radial-gradient(closest-side,rgba(255,255,255,.6),transparent);mix-blend-mode:screen;filter:blur(7px);rotate:-24deg;
+  background:radial-gradient(closest-side,rgba(255,255,255,.5),rgba(255,255,255,0));rotate:-24deg;
   animation:shine 6.5s ease-in-out infinite}
 @keyframes shine{0%,100%{opacity:.08;translate:-8% 0}50%{opacity:.5;translate:14% 6%}}
 .scoop .drop{position:absolute;width:9px;height:14px;margin-left:-4px;border-radius:50% 50% 50% 50%/64% 64% 36% 36%;pointer-events:none;
@@ -363,7 +363,7 @@ svg{display:block}
   .carousel{--vis:2.3}
   .menu .grid{margin:0 calc(var(--pad)*-1);padding:34px var(--pad) 42px;-webkit-mask-image:none;mask-image:none}
 }
-@media (max-width:699px){.car-arrow{display:none}}
+@media (max-width:699px){.car-arrow{display:none}.fx-aurora i{animation:none!important}}
 @media (max-width:599px){
   .carousel{--vis:1.4;--gap:14px}
   .menu .card{padding:18px 18px 20px}
@@ -1085,6 +1085,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
   function size(){
     dpr=Math.min(devicePixelRatio||1,1.5);
     const w=innerWidth,h=innerHeight;
+    if(W && w===W && Math.abs(h-H)<160) return;   // barra de endereço do celular: ignora
     if(W&&H) parts.forEach(p=>{p.x*=w/W;});
     W=w;H=h; cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0);
   }
@@ -1195,6 +1196,7 @@ document.getElementById('year').textContent = new Date().getFullYear();
   // arrastar com o mouse (no toque o deslize é nativo)
   let down=false,sx=0,sl=0,moved=0,pid=null;
   grid.addEventListener('pointerdown',e=>{
+    moved=0;
     if(e.pointerType!=='mouse'||e.button!==0||e.target.closest('button,a,input')) return;
     down=true; sx=e.clientX; sl=grid.scrollLeft; moved=0; pid=e.pointerId;
   });
@@ -1226,7 +1228,8 @@ document.getElementById('year').textContent = new Date().getFullYear();
   $('#searchInput').addEventListener('input',refilter);
   $('#searchForm').addEventListener('submit',refilter);
   buildDots();
-  addEventListener('resize',()=>centerOn(sel,false));
+  let lastW=innerWidth;
+  addEventListener('resize',()=>{ if(innerWidth!==lastW){ lastW=innerWidth; centerOn(sel,false); } });
 
   /* ---------- Microinterações: onda no clique, preço, feedback do pedido ---------- */
   document.addEventListener('pointerdown',e=>{
@@ -1253,6 +1256,27 @@ document.getElementById('year').textContent = new Date().getFullYear();
     toast.textContent=`${n}× ${name} — abrindo o WhatsApp`; toast.classList.add('show');
     clearTimeout(tt); tt=setTimeout(()=>toast.classList.remove('show'),2600);
   });
+})();
+</script>
+
+<script>
+/* ---------- Vigia do vídeo da hero: retoma se o navegador pausar ou travar ---------- */
+(function(){
+  const v=document.getElementById('heroVideo'); if(!v) return;
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const want=()=>!reduce && !document.hidden && scrollY<6;
+  function kick(){ if(want() && v.paused && v.readyState>=2) v.play().catch(()=>{}); }
+  setInterval(kick,1200);
+  ['pointerdown','touchstart','keydown','scroll'].forEach(ev=>addEventListener(ev,kick,{passive:true}));
+  document.addEventListener('visibilitychange',kick);
+  v.addEventListener('pause',()=>setTimeout(kick,60));
+  v.addEventListener('canplay',kick);
+  let bad=0;
+  setInterval(()=>{
+    if(!document.hidden && !v.seeking && v.readyState<2 && v.currentTime>0 && scrollY<900){
+      if(++bad>=3){ v.currentTime=Math.max(0,v.currentTime-.05); bad=0; }   // destrava quadro perdido
+    } else bad=0;
+  },1000);
 })();
 </script>
 </body></html>
